@@ -11,7 +11,7 @@ interface Props {
   active: boolean;
 }
 
-/** Barras espelhadas; a parte já tocada é coberta pela versão neon via clipPath. */
+/** Barras espelhadas; a parte já tocada é coberta pela versão colorida via clipPath. */
 export const Waveform = memo(function Waveform({ peaks, startedAt, durationMs, active }: Props) {
   const clipId = useId();
   const progress = usePlaybackProgress(startedAt, durationMs);
@@ -37,13 +37,9 @@ export const Waveform = memo(function Waveform({ peaks, startedAt, durationMs, a
         <clipPath id={clipId}>
           <rect width={width * progress} height={HEIGHT} />
         </clipPath>
-        <linearGradient id={`${clipId}-g`} x1="0" x2="1">
-          <stop offset="0" stopColor="#d7a3ff" />
-          <stop offset="1" stopColor="#b44dff" />
-        </linearGradient>
       </defs>
       <path d={path} fill={active ? "#c9c9d3" : "#8f8f9b"} opacity={active ? 0.75 : 0.9} />
-      {progress > 0 && <path d={path} fill={`url(#${clipId}-g)`} clipPath={`url(#${clipId})`} />}
+      {progress > 0 && <path d={path} fill="#a66bcc" clipPath={`url(#${clipId})`} />}
     </svg>
   );
 });

@@ -37,8 +37,8 @@ export function Toasts({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: (id:
           }`}
         >
           {t.kind === "error" && <AlertTriangle size={17} className="text-red-400 shrink-0 mt-px" />}
-          {t.kind === "success" && <CheckCircle2 size={17} className="text-neon shrink-0 mt-px" />}
-          {t.kind === "busy" && <Loader2 size={17} className="text-neon shrink-0 mt-px animate-spin" />}
+          {t.kind === "success" && <CheckCircle2 size={17} className="text-accent shrink-0 mt-px" />}
+          {t.kind === "busy" && <Loader2 size={17} className="text-accent shrink-0 mt-px animate-spin" />}
           <span className="flex-1 text-zinc-200 whitespace-pre-line break-words">{t.message}</span>
           <button aria-label="Fechar" onClick={() => onDismiss(t.id)} className="text-muted hover:text-white">
             <X size={15} />

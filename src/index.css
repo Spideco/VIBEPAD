@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* Fonte embutida no app, funciona offline. */
+@import "@fontsource-variable/plus-jakarta-sans";
 
 @theme {
   --color-base: #121214;
@@ -8,9 +10,9 @@
   --color-line: #2a2a31;
   --color-muted: #8d8d98;
   --color-brand: #7b1fa2;
-  --color-neon: #b44dff;
-  --color-neon-soft: #d7a3ff;
-  --font-sans: "Segoe UI Variable Text", "Segoe UI", Inter, system-ui, sans-serif;
+  --color-accent: #9a4fc4;
+  --color-accent-soft: #cdb0e0;
+  --font-sans: "Plus Jakarta Sans Variable", "Segoe UI", system-ui, sans-serif;
 }
 
 html,
@@ -27,6 +29,7 @@ body {
   overflow: hidden;
   user-select: none;
   -webkit-font-smoothing: antialiased;
+  font-family: var(--font-sans);
 }
 
 input,
@@ -60,21 +63,16 @@ textarea {
   border-radius: 999px;
   outline: none;
   cursor: pointer;
-  background: linear-gradient(
-    to right,
-    var(--color-neon) 0%,
-    var(--color-brand) var(--val, 50%),
-    #34343c var(--val, 50%)
-  );
+  background: linear-gradient(to right, var(--color-accent) var(--val, 50%), #34343c var(--val, 50%));
 }
 .vp-range::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: #f4e9ff;
-  border: 3px solid var(--color-neon);
-  box-shadow: 0 0 10px rgb(180 77 255 / 0.6);
+  background: #f2f2f4;
+  border: none;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.5);
   transition: transform 0.12s;
 }
 .vp-range:hover::-webkit-slider-thumb {
@@ -101,17 +99,4 @@ select option {
 }
 .vp-pop {
   animation: vp-pop 0.14s ease-out;
-}
-
-@keyframes vp-pulse {
-  0%,
-  100% {
-    box-shadow: 0 0 0 1px var(--color-neon), 0 0 14px rgb(180 77 255 / 0.35);
-  }
-  50% {
-    box-shadow: 0 0 0 1px var(--color-neon), 0 0 22px rgb(180 77 255 / 0.6);
-  }
-}
-.vp-playing {
-  animation: vp-pulse 1.6s ease-in-out infinite;
 }

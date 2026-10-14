@@ -15,7 +15,7 @@ interface Props {
 export function Logo() {
   return (
     <div className="flex items-center gap-2.5 px-2">
-      <div className="size-9 rounded-xl bg-gradient-to-br from-neon to-brand grid place-items-center shadow-[0_0_18px_rgba(180,77,255,0.45)]">
+      <div className="size-9 rounded-xl bg-brand grid place-items-center">
         <svg viewBox="0 0 24 24" className="size-5" fill="white">
           <rect x="3" y="9" width="2.4" height="6" rx="1.2" />
           <rect x="7.4" y="6" width="2.4" height="12" rx="1.2" />
@@ -50,11 +50,11 @@ function NavItem({
       onClick={onClick}
       className={`w-full flex items-center gap-3 h-10 px-3 rounded-lg text-sm transition-colors ${
         active
-          ? "bg-white/[0.08] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]"
+          ? "bg-white/[0.08] text-white"
           : "text-zinc-300 hover:bg-white/[0.04] hover:text-white"
       }`}
     >
-      <span className={active ? "text-neon-soft" : "text-zinc-400"}>{icon}</span>
+      <span className={active ? "text-accent-soft" : "text-zinc-400"}>{icon}</span>
       <span className="flex-1 text-left">{label}</span>
       {count !== undefined && <span className="text-xs text-muted tabular-nums">{count}</span>}
     </button>
@@ -78,7 +78,7 @@ export function Sidebar({ view, onView, onAdd, settings, onSettings, counts }: P
 
       <button
         onClick={onAdd}
-        className="h-10 rounded-lg bg-gradient-to-r from-brand to-neon text-white text-sm font-medium flex items-center justify-center gap-2 shadow-[0_6px_24px_-6px_rgba(180,77,255,0.7)] hover:brightness-110 active:brightness-95 transition"
+        className="h-10 rounded-lg bg-brand text-white text-sm font-medium flex items-center justify-center gap-2 hover:brightness-110 active:brightness-95 transition"
       >
         <Plus size={17} strokeWidth={2.5} />
         Adicionar Som

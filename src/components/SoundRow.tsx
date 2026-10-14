@@ -47,9 +47,9 @@ export const SoundRow = memo(function SoundRow(props: Props) {
       }}
       className={`group relative flex items-center gap-4 h-[54px] pl-2.5 pr-4 rounded-xl border transition-colors ${
         playing
-          ? "vp-playing border-neon bg-[#1f1827]"
+          ? "border-accent/70 bg-[#1d1a22]"
           : selected
-            ? "border-neon/45 bg-card-hover"
+            ? "border-accent/45 bg-card-hover"
             : "border-line/70 bg-card hover:bg-card-hover hover:border-zinc-700"
       }`}
     >
@@ -58,8 +58,8 @@ export const SoundRow = memo(function SoundRow(props: Props) {
         onClick={() => props.onToggle(sound.id)}
         className={`size-8 shrink-0 rounded-full grid place-items-center transition-all ${
           playing
-            ? "bg-neon text-white shadow-[0_0_14px_rgba(180,77,255,0.7)]"
-            : "bg-white/10 text-zinc-200 hover:bg-neon hover:text-white"
+            ? "bg-accent text-white"
+            : "bg-white/10 text-zinc-200 hover:bg-accent hover:text-white"
         }`}
       >
         {playing ? <Square size={12} fill="currentColor" /> : <Play size={14} fill="currentColor" className="ml-0.5" />}
@@ -79,7 +79,7 @@ export const SoundRow = memo(function SoundRow(props: Props) {
             {sound.name}
           </span>
         )}
-        {sound.favorite && !renaming && <Heart size={13} className="shrink-0 text-neon fill-neon" />}
+        {sound.favorite && !renaming && <Heart size={13} className="shrink-0 text-accent fill-accent" />}
       </div>
 
       <div
@@ -93,7 +93,7 @@ export const SoundRow = memo(function SoundRow(props: Props) {
           className={iconBtn}
           onClick={() => props.onFavorite(sound.id, !sound.favorite)}
         >
-          <Heart size={15} className={sound.favorite ? "text-neon fill-neon" : ""} />
+          <Heart size={15} className={sound.favorite ? "text-accent fill-accent" : ""} />
         </button>
         <button aria-label="Volume do som" className={iconBtn} onClick={() => setPopover(popover === "volume" ? "none" : "volume")}>
           <Volume2 size={15} />
@@ -169,7 +169,7 @@ function RenameInput({ initial, onDone }: { initial: string; onDone: (name: stri
         if (e.key === "Enter") (e.target as HTMLInputElement).blur();
         if (e.key === "Escape") onDone(null);
       }}
-      className="w-full h-8 px-2 rounded-md bg-deep border border-neon/60 text-sm outline-none"
+      className="w-full h-8 px-2 rounded-md bg-deep border border-accent/60 text-sm outline-none"
     />
   );
 }

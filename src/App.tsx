@@ -250,9 +250,6 @@ export default function App() {
 
   return (
     <div className="h-full flex flex-col relative overflow-hidden bg-deep">
-      {/* Brilho roxo de fundo, como na referência */}
-      <div className="pointer-events-none absolute -left-40 -top-40 size-[520px] rounded-full bg-brand/30 blur-[120px]" />
-      <div className="pointer-events-none absolute -left-20 bottom-[-200px] size-[420px] rounded-full bg-neon/15 blur-[120px]" />
 
       <TitleBar />
 
@@ -310,8 +307,8 @@ export default function App() {
           )}
 
           {dragOver && (
-            <div className="absolute inset-3 z-40 rounded-2xl border-2 border-dashed border-neon bg-neon/10 backdrop-blur-sm grid place-items-center pointer-events-none">
-              <div className="flex flex-col items-center gap-2 text-neon-soft">
+            <div className="absolute inset-3 z-40 rounded-2xl border-2 border-dashed border-accent bg-accent/10 backdrop-blur-sm grid place-items-center pointer-events-none">
+              <div className="flex flex-col items-center gap-2 text-accent-soft">
                 <Upload size={34} />
                 <span className="font-medium">Solte para adicionar à biblioteca</span>
               </div>

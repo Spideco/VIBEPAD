@@ -55,12 +55,12 @@ export function HotkeyBadge({
   placeholder?: string;
 }) {
   const base =
-    "inline-flex items-center gap-1 h-6 px-2 rounded-md border text-[11px] font-semibold tracking-wide font-mono whitespace-nowrap transition-colors";
+    "inline-flex items-center gap-1 h-6 px-2 rounded-md border text-[11px] font-semibold tracking-wide whitespace-nowrap transition-colors";
   if (!hotkey) {
     return (
       <button
         onClick={onClick}
-        className={`${base} border-dashed border-line text-muted hover:border-neon/60 hover:text-neon-soft`}
+        className={`${base} border-dashed border-line text-muted hover:border-accent/60 hover:text-accent-soft`}
       >
         {placeholder}
       </button>
@@ -73,7 +73,7 @@ export function HotkeyBadge({
       className={`${base} ${
         error
           ? "border-amber-500/70 text-amber-300 bg-amber-500/10"
-          : "border-neon/70 text-neon-soft bg-neon/10 hover:bg-neon/20 shadow-[0_0_10px_rgba(180,77,255,0.15)]"
+          : "border-accent/70 text-accent-soft bg-accent/10 hover:bg-accent/20"
       }`}
     >
       {error && <AlertTriangle size={11} />}[{formatHotkey(hotkey)}]
@@ -100,7 +100,7 @@ export function Select({
         aria-label={label}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full appearance-none h-9 pl-3 pr-8 rounded-lg bg-deep/70 border border-line text-sm text-zinc-100 outline-none hover:border-zinc-600 focus:border-neon/70 cursor-pointer truncate"
+        className="w-full appearance-none h-9 pl-3 pr-8 rounded-lg bg-deep/70 border border-line text-sm text-zinc-100 outline-none hover:border-zinc-600 focus:border-accent/70 cursor-pointer truncate"
       >
         {children}
       </select>
@@ -117,7 +117,7 @@ export function Toggle({ checked, onChange, label }: { checked: boolean; onChang
       aria-label={label}
       onClick={() => onChange(!checked)}
       className={`relative w-10 h-6 rounded-full transition-colors shrink-0 ${
-        checked ? "bg-gradient-to-r from-brand to-neon" : "bg-zinc-700"
+        checked ? "bg-brand" : "bg-zinc-700"
       }`}
     >
       <span
@@ -133,7 +133,7 @@ export function Card({ title, icon, children }: { title: string; icon: ReactNode
   return (
     <section className="rounded-2xl border border-line/70 bg-card/70 p-5">
       <h2 className="flex items-center gap-2 text-sm font-semibold text-zinc-100 mb-4">
-        <span className="text-neon">{icon}</span>
+        <span className="text-accent">{icon}</span>
         {title}
       </h2>
       <div className="space-y-4">{children}</div>

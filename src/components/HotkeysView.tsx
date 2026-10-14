@@ -94,7 +94,7 @@ function Row({
       <button
         onClick={onIcon}
         disabled={!onIcon}
-        className="size-7 rounded-full grid place-items-center bg-white/10 text-zinc-300 enabled:hover:bg-neon enabled:hover:text-white"
+        className="size-7 rounded-full grid place-items-center bg-white/10 text-zinc-300 enabled:hover:bg-accent enabled:hover:text-white"
       >
         {icon}
       </button>

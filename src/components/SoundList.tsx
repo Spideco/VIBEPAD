@@ -43,7 +43,7 @@ export function SoundList(props: Props) {
           <h1 className="text-[17px] font-semibold text-white truncate">{props.title}</h1>
           <p className="text-xs text-muted">
             {sounds.length} {sounds.length === 1 ? "som" : "sons"}
-            {playing.size > 0 && <span className="text-neon-soft"> · {playing.size} tocando</span>}
+            {playing.size > 0 && <span className="text-accent-soft"> · {playing.size} tocando</span>}
           </p>
         </div>
 
@@ -54,7 +54,7 @@ export function SoundList(props: Props) {
             onChange={(e) => props.onQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Escape" && props.onQuery("")}
             placeholder="Buscar sons…"
-            className="w-56 h-9 pl-9 pr-3 rounded-lg bg-white/[0.04] border border-line text-sm outline-none placeholder:text-muted focus:border-neon/60 focus:bg-white/[0.06]"
+            className="w-56 h-9 pl-9 pr-3 rounded-lg bg-white/[0.04] border border-line text-sm outline-none placeholder:text-muted focus:border-accent/60 focus:bg-white/[0.06]"
           />
         </label>
 
@@ -85,7 +85,7 @@ export function SoundList(props: Props) {
                   className="w-full flex items-center justify-between h-8 px-2.5 rounded-lg text-left text-zinc-200 hover:bg-white/[0.07]"
                 >
                   {s.label}
-                  {props.sort === s.key && <Check size={15} className="text-neon" />}
+                  {props.sort === s.key && <Check size={15} className="text-accent" />}
                 </button>
               ))}
             </div>
@@ -128,7 +128,7 @@ function EmptyState({ favorites, searching, hasSounds, onAdd }: { favorites: boo
   if (favorites && hasSounds) {
     return (
       <div className="flex flex-col items-center text-center pt-20 gap-3">
-        <Heart size={36} className="text-neon/70" />
+        <Heart size={36} className="text-accent/70" />
         <p className="text-zinc-300">Nenhum favorito ainda</p>
         <p className="text-sm text-muted max-w-xs">Passe o mouse sobre um som e clique no coração para fixá-lo aqui.</p>
       </div>
@@ -136,8 +136,8 @@ function EmptyState({ favorites, searching, hasSounds, onAdd }: { favorites: boo
   }
   return (
     <div className="h-full min-h-[320px] flex flex-col items-center justify-center text-center gap-4 rounded-2xl border-2 border-dashed border-line">
-      <div className="size-16 rounded-2xl bg-neon/10 grid place-items-center">
-        <Music size={30} className="text-neon" />
+      <div className="size-16 rounded-2xl bg-accent/10 grid place-items-center">
+        <Music size={30} className="text-accent" />
       </div>
       <div>
         <p className="text-zinc-100 font-medium">Sua biblioteca está vazia</p>
@@ -145,7 +145,7 @@ function EmptyState({ favorites, searching, hasSounds, onAdd }: { favorites: boo
       </div>
       <button
         onClick={onAdd}
-        className="h-9 px-4 rounded-lg bg-gradient-to-r from-brand to-neon text-sm font-medium flex items-center gap-2 hover:brightness-110"
+        className="h-9 px-4 rounded-lg bg-brand text-sm font-medium flex items-center gap-2 hover:brightness-110"
       >
         <Plus size={16} /> Adicionar Som
       </button>

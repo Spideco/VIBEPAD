@@ -27,7 +27,7 @@ export function SettingsView({ settings, devices, hotkeyErrors, onSettings, onRe
           <h1 className="text-[17px] font-semibold text-white">Configurações</h1>
           <p className="text-xs text-muted">Roteamento de áudio, volumes e comportamento de reprodução.</p>
         </div>
-        <button onClick={onRefreshDevices} className="h-9 px-3 rounded-lg border border-line text-sm flex items-center gap-2 text-zinc-300 hover:border-neon/60 hover:text-white">
+        <button onClick={onRefreshDevices} className="h-9 px-3 rounded-lg border border-line text-sm flex items-center gap-2 text-zinc-300 hover:border-accent/60 hover:text-white">
           <RefreshCw size={14} /> Atualizar dispositivos
         </button>
       </div>
@@ -42,7 +42,7 @@ export function SettingsView({ settings, devices, hotkeyErrors, onSettings, onRe
                   onClick={() => onSettings({ outputMode: m.value })}
                   className={`h-16 rounded-xl border text-xs flex flex-col items-center justify-center gap-1.5 transition-colors ${
                     settings.outputMode === m.value
-                      ? "border-neon bg-neon/10 text-white shadow-[0_0_16px_rgba(180,77,255,0.25)]"
+                      ? "border-accent bg-accent/10 text-white"
                       : "border-line text-zinc-400 hover:border-zinc-600 hover:text-zinc-200"
                   }`}
                 >
