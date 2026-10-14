@@ -1,6 +1,7 @@
-import { Headphones, Info, Mic, PlayCircle, RefreshCw, SlidersHorizontal } from "lucide-react";
+import { Headphones, Mic, PlayCircle, RefreshCw, SlidersHorizontal } from "lucide-react";
 import type { DeviceInfo, Settings } from "../lib/types";
 import { OUTPUT_MODES, STOP_KEY } from "../lib/types";
+import { MicCard } from "./MicCard";
 import { Card, Field, HotkeyBadge, Select, Toggle, VolumeSlider } from "./ui";
 
 interface Props {
@@ -10,15 +11,13 @@ interface Props {
   onSettings: (patch: Partial<Settings>) => void;
   onRefreshDevices: () => void;
   onEditStopHotkey: () => void;
+  onNotify: (kind: "success" | "error", message: string) => void;
 }
 
 const AUTO = "__auto__";
 
-export function SettingsView({ settings, devices, hotkeyErrors, onSettings, onRefreshDevices, onEditStopHotkey }: Props) {
-  const detectedMic = devices.find((d) => d.isVirtual);
+export function SettingsView({ settings, devices, hotkeyErrors, onSettings, onRefreshDevices, onEditStopHotkey, onNotify }: Props) {
   const defaultOut = devices.find((d) => d.isDefault);
-  const usesMic = settings.outputMode !== "monitorOnly";
-  const micMissing = usesMic && !(settings.micDevice ? devices.some((d) => d.name === settings.micDevice) : detectedMic);
 
   return (
     <div className="h-full overflow-y-auto px-5 pt-4 pb-6">
@@ -33,6 +32,8 @@ export function SettingsView({ settings, devices, hotkeyErrors, onSettings, onRe
       </div>
 
       <div className="space-y-4 max-w-3xl">
+        <MicCard settings={settings} devices={devices} onSettings={onSettings} onNotify={onNotify} />
+
         <Card title="Saída de áudio" icon={<SlidersHorizontal size={16} />}>
           <Field label="Modo de saída" hint="Para onde cada som é enviado.">
             <div className="grid grid-cols-3 gap-2">
@@ -54,30 +55,6 @@ export function SettingsView({ settings, devices, hotkeyErrors, onSettings, onRe
                 </button>
               ))}
             </div>
-          </Field>
-
-          <Field
-            label="Microfone virtual"
-            hint={<>Dispositivo que alimenta o microfone em outros apps (ex.: <b>CABLE Input</b>).</>}
-          >
-            <Select
-              label="Microfone virtual"
-              value={settings.micDevice ?? AUTO}
-              onChange={(v) => onSettings({ micDevice: v === AUTO ? null : v })}
-            >
-              <option value={AUTO}>Detectar automaticamente{detectedMic ? ` (${detectedMic.name})` : ""}</option>
-              {devices.map((d) => (
-                <option key={d.name} value={d.name}>
-                  {d.isVirtual ? "🎙 " : ""}
-                  {d.name}
-                </option>
-              ))}
-            </Select>
-            {micMissing && (
-              <p className="text-xs text-amber-300 mt-2 leading-relaxed">
-                Nenhum cabo de áudio virtual encontrado. Instale o VB-Audio Virtual Cable (gratuito) e clique em "Atualizar dispositivos".
-              </p>
-            )}
           </Field>
 
           <Field label="Fones (monitor)" hint="Onde você ouve os sons tocados.">
@@ -121,23 +98,6 @@ export function SettingsView({ settings, devices, hotkeyErrors, onSettings, onRe
           </Field>
         </Card>
 
-        <Card title="Como usar o som no microfone" icon={<Info size={16} />}>
-          <ol className="text-sm text-zinc-300 space-y-2 list-decimal pl-5 leading-relaxed">
-            <li>
-              Instale um cabo de áudio virtual, como o <b className="text-white">VB-Audio Virtual Cable</b>.
-            </li>
-            <li>
-              Aqui no VibePad, selecione <b className="text-white">CABLE Input</b> como microfone virtual.
-            </li>
-            <li>
-              No Discord, jogo ou OBS, escolha <b className="text-white">CABLE Output</b> como dispositivo de entrada.
-            </li>
-            <li>
-              Para enviar sua voz junto com os sons, abra as propriedades do seu microfone no Windows → aba
-              <i> Escutar</i> → marque <i>Escutar este dispositivo</i> e reproduza em <b className="text-white">CABLE Input</b> (ou use o Voicemeeter).
-            </li>
-          </ol>
-        </Card>
       </div>
     </div>
   );

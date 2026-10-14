@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { mockApi } from "./mock";
-import type { DeviceInfo, Settings, Snapshot, Sound } from "./types";
+import type { DeviceInfo, NativeMicState, Settings, Snapshot, Sound } from "./types";
 
 export const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
@@ -18,6 +18,10 @@ export interface Api {
   stopSound(id: string): Promise<void>;
   stopAll(): Promise<void>;
   setHotkeysSuspended(suspended: boolean): Promise<Snapshot>;
+  nativeMicState(): Promise<NativeMicState>;
+  /** Abre o UAC e instala o microfone nativo; resolve com a mensagem de sucesso. */
+  installNativeMic(guid: string): Promise<string>;
+  uninstallNativeMic(guid: string): Promise<string>;
   onPlaybackState(cb: (ids: string[]) => void): Promise<UnlistenFn>;
   onPlaybackStarted(cb: (id: string) => void): Promise<UnlistenFn>;
   onAudioError(cb: (message: string) => void): Promise<UnlistenFn>;
@@ -47,6 +51,9 @@ const tauriApi: Api = {
   stopSound: (id) => invoke("stop_sound", { id }),
   stopAll: () => invoke("stop_all"),
   setHotkeysSuspended: (suspended) => invoke("set_hotkeys_suspended", { suspended }),
+  nativeMicState: () => invoke("native_mic_state"),
+  installNativeMic: (guid) => invoke("install_native_mic", { guid }),
+  uninstallNativeMic: (guid) => invoke("uninstall_native_mic", { guid }),
   onPlaybackState: (cb) => listen<string[]>("playback-state", (e) => cb(e.payload)),
   onPlaybackStarted: (cb) => listen<string>("playback-started", (e) => cb(e.payload)),
   onAudioError: (cb) => listen<string>("audio-error", (e) => cb(e.payload)),

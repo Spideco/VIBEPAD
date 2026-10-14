@@ -1,0 +1,22 @@
+[package]
+name = "vibepad-apo"
+version = "0.1.0"
+edition = "2021"
+description = "APO (Audio Processing Object) que injeta o áudio do VibePad no microfone"
+
+# DLL carregada pelo audiodg.exe. Todo o código fica em cpp/ (C++ com a
+# classe base do Windows SDK); o Cargo só cuida da compilação e do link.
+[lib]
+name = "vibepad_mic"
+crate-type = ["cdylib"]
+path = "src/lib.rs"
+
+[build-dependencies]
+cc = "1"
+
+[profile.release]
+opt-level = 2
+panic = "abort"
+
+[profile.dev]
+panic = "abort"

@@ -303,6 +303,7 @@ export default function App() {
               onSettings={updateSettings}
               onRefreshDevices={refreshDevices}
               onEditStopHotkey={editStopHotkey}
+              onNotify={push}
             />
           )}
 

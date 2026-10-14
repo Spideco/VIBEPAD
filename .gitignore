@@ -1,6 +1,7 @@
 node_modules
 dist
 src-tauri/target
+apo/target
 src-tauri/gen/schemas
 *.log
 *.tsbuildinfo

@@ -2,7 +2,7 @@ use std::{fs, path::Path};
 
 use serde::{Deserialize, Serialize};
 
-use crate::audio::{AudioConfig, OutputMode};
+use crate::audio::{AudioConfig, MicBackend, OutputMode};
 
 fn default_volume() -> f32 {
     1.0
@@ -29,6 +29,9 @@ pub struct Sound {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Settings {
+    pub mic_backend: MicBackend,
+    /// Silencia a voz real enquanto um som toca no microfone nativo.
+    pub block_mic: bool,
     pub mic_device: Option<String>,
     pub monitor_device: Option<String>,
     pub output_mode: OutputMode,
@@ -41,6 +44,8 @@ pub struct Settings {
 impl Default for Settings {
     fn default() -> Self {
         Self {
+            mic_backend: MicBackend::Native,
+            block_mic: false,
             mic_device: None,
             monitor_device: None,
             output_mode: OutputMode::Both,
@@ -78,6 +83,8 @@ impl Library {
     pub fn audio_config(&self) -> AudioConfig {
         let s = &self.settings;
         AudioConfig {
+            mic_backend: s.mic_backend,
+            block_mic: s.block_mic,
             mic_device: s.mic_device.clone(),
             monitor_device: s.monitor_device.clone(),
             mode: s.output_mode,

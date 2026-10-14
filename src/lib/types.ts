@@ -11,7 +11,12 @@ export interface Sound {
   peaks: number[];
 }
 
+export type MicBackend = "native" | "virtualCable";
+
 export interface Settings {
+  micBackend: MicBackend;
+  /** Silencia a voz real enquanto um som toca (microfone nativo). */
+  blockMic: boolean;
   micDevice: string | null;
   monitorDevice: string | null;
   outputMode: OutputMode;
@@ -34,7 +39,27 @@ export interface DeviceInfo {
   isVirtual: boolean;
 }
 
-export type View = "library" | "favorites" | "hotkeys" | "settings";
+export interface CaptureDevice {
+  guid: string;
+  name: string;
+  isDefault: boolean;
+  installed: boolean;
+}
+
+export interface NativeMicState {
+  devices: CaptureDevice[];
+  feed: {
+    /** O APO já criou o canal de comunicação. */
+    connected: boolean;
+    /** Algum app está usando o microfone agora. */
+    active: boolean;
+    micRate: number;
+    micChannels: number;
+  };
+  dllAvailable: boolean;
+}
+
+export type View ="library" | "favorites" | "hotkeys" | "settings";
 
 export const STOP_KEY = "__stop__";
 

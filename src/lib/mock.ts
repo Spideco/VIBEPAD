@@ -40,6 +40,8 @@ const state: Snapshot = {
     sample("i9", "Wow.mp3", null, 1300, "burst"),
   ],
   settings: {
+    micBackend: "native",
+    blockMic: false,
     micDevice: null,
     monitorDevice: null,
     outputMode: "both",
@@ -50,6 +52,11 @@ const state: Snapshot = {
   },
   hotkeyErrors: {},
 };
+
+const mockMics = [
+  { guid: "{a1}", name: "Microfone (HyperX Cloud II)", isDefault: true, installed: false },
+  { guid: "{b2}", name: "Microfone (Realtek High Definition Audio)", isDefault: false, installed: false },
+];
 
 type Cb<T> = (v: T) => void;
 const stateListeners = new Set<Cb<string[]>>();
@@ -118,6 +125,22 @@ export const mockApi: Api = {
     emitState();
   },
   setHotkeysSuspended: async () => clone(),
+  async nativeMicState() {
+    return {
+      devices: mockMics.map((m) => ({ ...m })),
+      feed: { connected: mockMics.some((m) => m.installed), active: mockMics.some((m) => m.installed), micRate: 48000, micChannels: 2 },
+      dllAvailable: true,
+    };
+  },
+  async installNativeMic(guid) {
+    await new Promise((r) => setTimeout(r, 800));
+    mockMics.forEach((m) => m.guid === guid && (m.installed = true));
+    return "Microfone nativo instalado.";
+  },
+  async uninstallNativeMic(guid) {
+    mockMics.forEach((m) => m.guid === guid && (m.installed = false));
+    return "Microfone nativo removido.";
+  },
   onPlaybackState: (cb) => sub(stateListeners, cb),
   onPlaybackStarted: (cb) => sub(startedListeners, cb),
   onAudioError: () => Promise.resolve(() => {}),

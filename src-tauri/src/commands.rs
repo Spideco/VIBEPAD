@@ -7,6 +7,8 @@ use crate::{
     audio::{self, AudioCommand, DeviceInfo},
     hotkeys::{self, STOP_KEY},
     library::{Library, Settings, Sound},
+    mic_native::FeedStatus,
+    mic_setup::{self, CaptureDevice},
     waveform, AppState,
 };
 
@@ -264,6 +266,52 @@ pub async fn stop_sound(app: AppHandle, id: String) -> CmdResult<()> {
 pub async fn stop_all(app: AppHandle) -> CmdResult<()> {
     app.state::<AppState>().audio.send(AudioCommand::StopAll);
     Ok(())
+}
+
+// ---- Microfone nativo (APO) ----
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NativeMicState {
+    devices: Vec<CaptureDevice>,
+    feed: FeedStatus,
+    /// A DLL do APO foi encontrada (no pacote ou na pasta de build).
+    dll_available: bool,
+}
+
+fn apo_dll_path(app: &AppHandle) -> Option<PathBuf> {
+    let bundled = app.path().resource_dir().ok().map(|dir| dir.join("vibepad_mic.dll"));
+    let dev = PathBuf::from(concat!(env!("CARGO_MANIFEST_DIR"), "/../apo/target/release/vibepad_mic.dll"));
+    bundled.filter(|p| p.exists()).or_else(|| dev.exists().then_some(dev))
+}
+
+#[tauri::command]
+pub async fn native_mic_state(app: AppHandle) -> CmdResult<NativeMicState> {
+    let devices = tauri::async_runtime::spawn_blocking(mic_setup::list_capture_devices)
+        .await
+        .map_err(|e| e.to_string())??;
+    Ok(NativeMicState {
+        devices,
+        feed: app.state::<AppState>().audio.native_mic_status(),
+        dll_available: apo_dll_path(&app).is_some(),
+    })
+}
+
+/// Instala o APO no microfone `guid`. Abre o UAC: as alterações no registro e
+/// o reinício do serviço de áudio rodam num processo elevado separado.
+#[tauri::command]
+pub async fn install_native_mic(app: AppHandle, guid: String) -> CmdResult<String> {
+    let dll = apo_dll_path(&app).ok_or("Componente do microfone (vibepad_mic.dll) não encontrado. Rode \"npm run build:apo\".")?;
+    tauri::async_runtime::spawn_blocking(move || mic_setup::run_elevated("install", &guid, Some(&dll)))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn uninstall_native_mic(guid: String) -> CmdResult<String> {
+    tauri::async_runtime::spawn_blocking(move || mic_setup::run_elevated("uninstall", &guid, None))
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 /// Suspende os atalhos globais enquanto o usuário grava uma nova combinação;

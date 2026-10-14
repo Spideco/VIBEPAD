@@ -2,6 +2,8 @@ mod audio;
 mod commands;
 mod hotkeys;
 mod library;
+mod mic_native;
+pub mod mic_setup;
 mod waveform;
 
 use std::{fs, path::PathBuf, sync::Mutex};
@@ -66,6 +68,9 @@ pub fn run() {
             commands::stop_sound,
             commands::stop_all,
             commands::set_hotkeys_suspended,
+            commands::native_mic_state,
+            commands::install_native_mic,
+            commands::uninstall_native_mic,
         ])
         .run(tauri::generate_context!())
         .expect("erro ao iniciar o VibePad");
