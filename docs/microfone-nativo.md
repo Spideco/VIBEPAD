@@ -53,7 +53,9 @@ Alternativas descartadas:
 2. **Anel de memória** (`apo/cpp/mic_ring.h` ↔ `src-tauri/src/mic_native.rs`):
    cabeçalho de 128 bytes e 65 536 quadros estéreo `f32` a 48 kHz. O app escreve
    no ritmo do relógio, ~50 ms adiantado; cada instância do APO lê com um cursor
-   próprio, mira ~60 ms de atraso e ressincroniza acima de 250 ms. Flags:
+   próprio, mira ~60 ms de atraso (ajustando a velocidade em até ±0,2% para
+   compensar a deriva entre o relógio do PC e o do microfone) e ressincroniza
+   acima de 250 ms. Flags:
    `active`, `blockMic` (silenciar a voz enquanto toca) e `apoHeartbeat`, que
    permite à interface saber se o APO está rodando.
 3. **Instalador** (`src-tauri/src/mic_setup.rs`): o VibePad se reexecuta como
@@ -64,8 +66,24 @@ Alternativas descartadas:
      (`HKLM\SOFTWARE\Classes\AudioEngine\AudioProcessingObjects`);
    - em `MMDevices\Audio\Capture\{guid}\FxProperties`, coloca o CLSID do APO no
      slot SFX (`{d04e05a6…},5`), no LFX em drivers legados ou no fim da lista
-     multi-SFX (`,13`) em drivers novos. Se o acesso for negado, os
-     Administradores assumem a posse da chave, como faz o Equalizer APO;
+     composta de SFX (`,13`) sempre que o driver usa qualquer lista composta
+     (`,13`, `,14` ou `,15`) — misturar a chave SFX antiga com as compostas
+     faz o Windows perder parte do processamento do fabricante e gera chiado
+     na voz. Se o acesso for negado, os Administradores assumem a posse da
+     chave, como faz o Equalizer APO;
+   - se o SFX não tinha lista de modos (`{d3993a3f…},5`), copia os modos que o
+     MFX/EFX anunciam (ex.: padrão + fala), para não tirar o modo de fala dos
+     apps de chamada;
+   - no slot legado, quem estiver lá na hora (inclusive numa reinstalação)
+     vira o filho do VibePad. Com o Equalizer APO isso dá a ordem certa:
+     microfone → Equalizer APO (supressão de ruído) → VibePad (soma os sons),
+     e a supressão não corta os sons. Os elos de APOs encadeadores conhecidos
+     (Equalizer APO em `HKLM\SOFTWARE\EqualizerAPO\Child APOs`, Soundpad em
+     `HKLM\SOFTWARE\Leppsoft\UniteFx`) que apontam de volta para o VibePad ou
+     fecham um laço são cortados. Na remoção, se outro APO assumiu o slot
+     depois, ele fica e só deixa de encadear o VibePad. O próprio APO também
+     detecta laços em tempo de execução (instância criada dentro da
+     inicialização de outra vira só repasse);
    - liga os "aprimoramentos de áudio" do dispositivo;
    - guarda o estado original em `HKLM\SOFTWARE\VibePad\MicApo\{guid}`, usado
      para encadear o APO original e para restaurar tudo na remoção;

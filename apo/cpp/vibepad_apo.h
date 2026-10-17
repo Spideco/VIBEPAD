@@ -78,6 +78,8 @@ private:
     VpmrHeader* ring;
     const float* ringData;
     double cursor;   // posição de leitura (em frames do anel), por instância
+    double lagAverage;  // atraso médio em relação a writePos, para compensar a deriva dos relógios
     bool synced;
+    bool nested;   // elo repetido numa cadeia circular: só repassa o áudio
     UINT32 retryCounter;
 };
