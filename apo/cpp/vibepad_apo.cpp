@@ -21,13 +21,17 @@ volatile LONG VibePadApo::instanceCount = 0;
 // tolerado antes de ressincronizar (em frames do anel).
 static const double TARGET_LAG = 0.06 * VPMR_RATE;
 static const double MAX_LAG = 0.25 * VPMR_RATE;
+// Correção máxima da velocidade de leitura (0,2% ≈ 3 cents, inaudível) e
+// suavização do atraso medido, que oscila conforme o app escreve em rajadas.
+static const double MAX_DRIFT = 0.002;
+static const double LAG_SMOOTHING = 0.01;
 // Quantos blocos (~10 ms cada) esperar entre tentativas de reabrir o anel.
 static const UINT32 RING_RETRY_BLOCKS = 100;
 
 VibePadApo::VibePadApo(IUnknown* outerUnknown)
     : CBaseAudioProcessingObject(regProperties), refCount(1), childApo(nullptr), childRt(nullptr), childCfg(nullptr),
       channels(0), sampleRate(48000.0f), ringMapping(nullptr), ring(nullptr), ringData(nullptr), cursor(0),
-      synced(false), retryCounter(0)
+      lagAverage(0), synced(false), nested(false), retryCounter(0)
 {
     outer = outerUnknown ? outerUnknown : reinterpret_cast<IUnknown*>(static_cast<INonDelegatingUnknown*>(this));
     InterlockedIncrement(&instanceCount);
@@ -122,9 +126,21 @@ HRESULT VibePadApo::Initialize(UINT32 cbDataSize, BYTE* pbyData)
         PropVariantClear(&var);
     }
 
+    // Outro APO encadeador (Equalizer APO, Soundpad) pode ter o VibePad como
+    // filho enquanto o VibePad o tem como filho: a criação viraria um laço.
+    // Uma instância criada dentro da inicialização de outra (mesma thread) é
+    // um elo repetido: não encadeia nada e não mixa, para os sons não dobrarem.
+    static thread_local int initDepth = 0;
+    nested = initDepth > 0;
+
     GUID childClsid;
-    if (endpointGuid[0] && readChildClsid(endpointGuid, &childClsid))
+    if (!nested && endpointGuid[0] && readChildClsid(endpointGuid, &childClsid))
     {
+        struct DepthGuard
+        {
+            DepthGuard() { initDepth++; }
+            ~DepthGuard() { initDepth--; }
+        } depthGuard;
         IAudioProcessingObject* apo = nullptr;
         if (SUCCEEDED(CoCreateInstance(childClsid, nullptr, CLSCTX_INPROC_SERVER, __uuidof(IAudioProcessingObject),
                                        reinterpret_cast<void**>(&apo))))
@@ -306,12 +322,20 @@ bool VibePadApo::mixRing(float* frames, UINT32 frameCount)
     }
 
     const double writePos = (double)ring->writePos;   // leitura volátil = acquire no MSVC
-    const double step = (double)VPMR_RATE / sampleRate;
     if (!synced || cursor > writePos || writePos - cursor > MAX_LAG)
     {
         cursor = writePos > TARGET_LAG ? writePos - TARGET_LAG : 0;
+        lagAverage = TARGET_LAG;
         synced = true;
     }
+
+    // O app escreve no ritmo do relógio do PC e o microfone consome no ritmo
+    // do cristal dele; os dois nunca batem. Sem correção o cursor encosta em
+    // writePos (picotes) ou se afasta até ressincronizar (estalo).
+    lagAverage += (writePos - cursor - lagAverage) * LAG_SMOOTHING;
+    double drift = (lagAverage - TARGET_LAG) / TARGET_LAG * MAX_DRIFT;
+    drift = drift > MAX_DRIFT ? MAX_DRIFT : (drift < -MAX_DRIFT ? -MAX_DRIFT : drift);
+    const double step = (double)VPMR_RATE / sampleRate * (1.0 + drift);
 
     const bool blockVoice = ring->blockMic != 0;
     bool wrote = blockVoice;
@@ -380,7 +404,7 @@ void VibePadApo::APOProcess(UINT32 u32NumInputConnections, APO_CONNECTION_PROPER
         output->u32BufferFlags = input->u32BufferFlags;
     }
 
-    if (mixRing(outFrames, output->u32ValidFrameCount))
+    if (!nested && mixRing(outFrames, output->u32ValidFrameCount))
         output->u32BufferFlags = BUFFER_VALID;
 }
 

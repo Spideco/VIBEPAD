@@ -52,11 +52,22 @@ const GFX: &str = "{d04e05a6-594b-4fb6-a80d-01af5eed7d1d},2";
 const SFX: &str = "{d04e05a6-594b-4fb6-a80d-01af5eed7d1d},5";
 const MFX: &str = "{d04e05a6-594b-4fb6-a80d-01af5eed7d1d},6";
 const EFX: &str = "{d04e05a6-594b-4fb6-a80d-01af5eed7d1d},7";
+/// Listas "compostas" do Windows 11 (SFX, MFX e EFX).
 const MULTI_SFX: &str = "{d04e05a6-594b-4fb6-a80d-01af5eed7d1d},13";
+const MULTI_MFX: &str = "{d04e05a6-594b-4fb6-a80d-01af5eed7d1d},14";
+const MULTI_EFX: &str = "{d04e05a6-594b-4fb6-a80d-01af5eed7d1d},15";
 const SFX_MODES: &str = "{d3993a3f-99c2-4402-b5ec-a92a0367664b},5";
+const MFX_MODES: &str = "{d3993a3f-99c2-4402-b5ec-a92a0367664b},6";
+const EFX_MODES: &str = "{d3993a3f-99c2-4402-b5ec-a92a0367664b},7";
 const DEFAULT_MODE: &str = "{C18E2F7E-933D-4965-B7D1-1EEF228D2AF3}";
 /// "Desativar aprimoramentos de áudio" — precisa estar desligado para o APO carregar.
 const DISABLE_ENHANCEMENTS: &str = "{1da5d803-d492-4edd-8c23-e0c0ffee7f0e},5";
+
+/// APOs de terceiros que, como o nosso, ocupam o slot e encadeiam o APO
+/// anterior, guardando esse "filho" no próprio registro.
+const EQUALIZER_APO_PRE: &str = "{EACD2258-FCAC-4FF4-B36D-419E924A6D79}";
+const EQUALIZER_APO_POST: &str = "{EC1CC9CE-FAED-4822-828A-82A81A6F018F}";
+const SOUNDPAD_APO: &str = "{27384E53-9860-0AC1-9519-C60EBCAA2C71}";
 
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
@@ -292,6 +303,18 @@ fn configure_endpoint(guid: &str) -> SetupResult<()> {
     let device_path = format!(r"{CAPTURE_KEY}\{guid}");
     hklm.open_subkey(&device_path).map_err(|_| "Microfone não encontrado no registro.".to_string())?;
 
+    // Instalações antigas gravavam a chave SFX antiga mesmo em drivers com
+    // listas compostas: desfaz antes, para não deixar o APO em dois lugares.
+    let old_slot = hklm
+        .open_subkey(format!(r"{BACKUP_KEY}\{guid}"))
+        .and_then(|backup| backup.get_value::<String, _>("Slot"));
+    let fx_is_composite = hklm
+        .open_subkey(format!(r"{device_path}\FxProperties"))
+        .is_ok_and(|fx| [MULTI_SFX, MULTI_MFX, MULTI_EFX].iter().any(|k| fx.get_raw_value(k).is_ok()));
+    if old_slot.is_ok_and(|slot| slot != MULTI_SFX) && fx_is_composite {
+        restore_endpoint(guid)?;
+    }
+
     let (fx, created) = open_fx_properties(&device_path)?;
     let (backup, _) = hklm
         .create_subkey(format!(r"{BACKUP_KEY}\{guid}"))
@@ -311,42 +334,150 @@ fn configure_endpoint(guid: &str) -> SetupResult<()> {
         }
     }
 
-    if has(MULTI_SFX) {
-        // Drivers novos usam uma lista de SFX: entramos no fim dela.
+    // Drivers do Windows 11 (ex.: Realtek) descrevem a cadeia em listas
+    // compostas, às vezes só de MFX/EFX. Gravar a chave SFX antiga ao lado
+    // delas mistura os dois esquemas e o Windows deixa de aplicar parte do
+    // processamento do fabricante (supressão de ruído etc.), o que aparece como
+    // chiado na voz. Nesses drivers entramos sempre na lista composta de SFX.
+    let slot = if fx_is_composite {
         let mut list: Vec<String> = fx.get_value(MULTI_SFX).unwrap_or_default();
         if first_install {
             backup.set_value("Slot", &MULTI_SFX).map_err(set_err)?;
             backup.set_value("OriginalMulti", &list).map_err(set_err)?;
+            if !has(MULTI_SFX) {
+                backup.set_value("MultiCreated", &1u32).map_err(set_err)?;
+            }
         }
         if !list.iter().any(|v| v.eq_ignore_ascii_case(APO_CLSID)) {
             list.push(APO_CLSID.to_string());
             fx.set_value(MULTI_SFX, &list).map_err(set_err)?;
         }
+        MULTI_SFX
     } else {
         let legacy = (has(LFX) || has(GFX)) && !has(SFX) && !has(MFX) && !has(EFX);
         let slot = if legacy { LFX } else { SFX };
+        // Quem está no slot agora vira o nosso filho. Isso vale também na
+        // reinstalação: se o Equalizer APO foi reinstalado por cima do VibePad,
+        // o slot é dele e não pode ser sobrescrito com o filho antigo do backup.
+        let current = fx.get_value::<String, _>(slot).unwrap_or_default();
+        let child = if is_vibepad(&current) {
+            backup.get_value::<String, _>("Child").unwrap_or_default()
+        } else {
+            current.clone()
+        };
         if first_install {
-            let original = fx.get_value::<String, _>(slot).unwrap_or_default();
             backup.set_value("Slot", &slot).map_err(set_err)?;
-            backup.set_value("Original", &original).map_err(set_err)?;
-            // O APO lê "Child" para encadear o efeito original do fabricante.
-            if original.starts_with('{') && !original.eq_ignore_ascii_case(APO_CLSID) {
-                backup.set_value("Child", &original).map_err(set_err)?;
-            }
-            if slot == SFX && !has(SFX_MODES) {
-                backup.set_value("ModesAdded", &1u32).map_err(set_err)?;
-            }
+        }
+        if first_install || !is_vibepad(&current) {
+            backup.set_value("Original", &current).map_err(set_err)?;
+        }
+        // O APO lê "Child" para encadear o efeito anterior (fabricante,
+        // Equalizer APO...). Ele roda antes da nossa mixagem, então a supressão
+        // de ruído trata só a voz e não corta os sons.
+        if is_clsid(&child) {
+            backup.set_value("Child", &child).map_err(set_err)?;
+            unlink_from_chain(guid, &child, "")?;
+        } else {
+            let _ = backup.delete_value("Child");
         }
         fx.set_value(slot, &APO_CLSID).map_err(set_err)?;
-        if slot == SFX && !has(SFX_MODES) {
-            fx.set_value(SFX_MODES, &vec![DEFAULT_MODE.to_string()]).map_err(set_err)?;
+        slot
+    };
+
+    // A lista de modos do SFX limita os modos do microfone inteiro. Se ela
+    // tivesse só o "padrão", apps de chamada (modo de fala) cairiam no modo
+    // padrão e perderiam o tratamento de voz do driver: copiamos os modos que
+    // o MFX/EFX já anunciavam.
+    if slot != LFX && !has(SFX_MODES) {
+        if first_install {
+            backup.set_value("ModesAdded", &1u32).map_err(set_err)?;
         }
+        fx.set_value(SFX_MODES, &supported_modes(&fx)).map_err(set_err)?;
     }
 
     if has(DISABLE_ENHANCEMENTS) {
         fx.delete_value(DISABLE_ENHANCEMENTS).map_err(set_err)?;
     }
     Ok(())
+}
+
+fn is_clsid(value: &str) -> bool {
+    value.starts_with('{') && value.ends_with('}')
+}
+
+fn is_vibepad(value: &str) -> bool {
+    value.eq_ignore_ascii_case(APO_CLSID)
+}
+
+/// Onde um APO "encadeador" conhecido guarda o próprio filho neste microfone.
+fn wrapper_link(clsid: &str, guid: &str) -> Option<(String, &'static str)> {
+    if clsid.eq_ignore_ascii_case(EQUALIZER_APO_PRE) {
+        Some((format!(r"SOFTWARE\EqualizerAPO\Child APOs\{guid}"), "PreMixChild"))
+    } else if clsid.eq_ignore_ascii_case(EQUALIZER_APO_POST) {
+        Some((format!(r"SOFTWARE\EqualizerAPO\Child APOs\{guid}"), "PostMixChild"))
+    } else if clsid.eq_ignore_ascii_case(SOUNDPAD_APO) {
+        Some((format!(r"SOFTWARE\Leppsoft\UniteFx\{guid}"), "Original-Apo"))
+    } else {
+        None
+    }
+}
+
+/// Percorre a cadeia a partir de `start` (o APO que fica abaixo do nosso) e
+/// corta qualquer elo que aponte de volta para o VibePad ou para um APO já
+/// visitado. Sem isso, Equalizer APO → VibePad → Soundpad → Equalizer APO → …
+/// vira um laço: os efeitos rodam várias vezes (ou somem) e os sons dobram.
+/// O elo cortado passa a apontar para `replacement`, se ele não fechar outro laço.
+fn unlink_from_chain(guid: &str, start: &str, replacement: &str) -> SetupResult<()> {
+    let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
+    let mut seen: Vec<String> = Vec::new();
+    let mut current = start.to_string();
+
+    while is_clsid(&current) && !is_vibepad(&current) && !seen.iter().any(|s| s.eq_ignore_ascii_case(&current)) {
+        seen.push(current.clone());
+        let Some((path, name)) = wrapper_link(&current, guid) else { break };
+        let Ok(key) = hklm.open_subkey_with_flags(&path, KEY_READ | KEY_WRITE) else { break };
+        let next = key.get_value::<String, _>(name).unwrap_or_default();
+        let loops = |clsid: &str| is_vibepad(clsid) || seen.iter().any(|s| s.eq_ignore_ascii_case(clsid));
+
+        if is_clsid(&next) && loops(&next) {
+            let target = if is_clsid(replacement) && !loops(replacement) { replacement } else { "" };
+            key.set_value(name, &target).map_err(|e| format!("Falha ao ajustar a cadeia de APOs: {e}"))?;
+            // O Equalizer APO também guarda uma cópia dos slots para restaurar
+            // ao ser desinstalado; ela não pode devolver o VibePad ao slot.
+            // Slot vazio usa o mesmo marcador que ele grava nos outros (ex.: "!VALUE").
+            let slots: Vec<(String, String)> = key
+                .enum_values()
+                .filter_map(Result::ok)
+                .filter(|(n, _)| n.starts_with("{d04e05a6"))
+                .filter_map(|(n, _)| key.get_value::<String, _>(&n).ok().map(|v| (n, v)))
+                .collect();
+            let absent = slots.iter().map(|(_, v)| v.as_str()).find(|v| !v.is_empty() && !is_clsid(v));
+            let mirror = if target.is_empty() { absent } else { Some(target) };
+            if let Some(mirror) = mirror {
+                for (slot, value) in &slots {
+                    if is_vibepad(value) {
+                        let _ = key.set_value(slot, &mirror);
+                    }
+                }
+            }
+            break;
+        }
+        current = next;
+    }
+    Ok(())
+}
+
+/// Modos que o driver já anuncia no MFX/EFX, com o "padrão" sempre primeiro.
+fn supported_modes(fx: &RegKey) -> Vec<String> {
+    let mut modes = vec![DEFAULT_MODE.to_string()];
+    for key in [MFX_MODES, EFX_MODES] {
+        for mode in fx.get_value::<Vec<String>, _>(key).unwrap_or_default() {
+            if mode.starts_with('{') && !modes.iter().any(|m| m.eq_ignore_ascii_case(&mode)) {
+                modes.push(mode);
+            }
+        }
+    }
+    modes
 }
 
 fn restore_endpoint(guid: &str) -> SetupResult<()> {
@@ -364,18 +495,31 @@ fn restore_endpoint(guid: &str) -> SetupResult<()> {
     } else if let Ok((fx, _)) = open_fx_properties(&device_path) {
         let slot: String = backup.get_value("Slot").unwrap_or_default();
         if slot == MULTI_SFX {
-            let original: Vec<String> = backup.get_value("OriginalMulti").unwrap_or_default();
-            fx.set_value(MULTI_SFX, &original).map_err(set_err)?;
+            if backup.get_value::<u32, _>("MultiCreated").is_ok() {
+                let _ = fx.delete_value(MULTI_SFX);
+            } else {
+                let original: Vec<String> = backup.get_value("OriginalMulti").unwrap_or_default();
+                fx.set_value(MULTI_SFX, &original).map_err(set_err)?;
+            }
         } else if !slot.is_empty() {
             let original: String = backup.get_value("Original").unwrap_or_default();
-            if original.is_empty() {
-                let _ = fx.delete_value(&slot);
-            } else {
-                fx.set_value(&slot, &original).map_err(set_err)?;
+            let child: String = backup.get_value("Child").unwrap_or_default();
+            let current = fx.get_value::<String, _>(&slot).unwrap_or_default();
+            if is_vibepad(&current) {
+                if original.is_empty() {
+                    let _ = fx.delete_value(&slot);
+                } else {
+                    fx.set_value(&slot, &original).map_err(set_err)?;
+                }
             }
-            if backup.get_value::<u32, _>("ModesAdded").is_ok() {
-                let _ = fx.delete_value(SFX_MODES);
-            }
+            // Se outro APO assumiu o slot depois (ex.: Equalizer APO reinstalado),
+            // ele fica onde está e só deixa de encadear o VibePad: passa a
+            // encadear o que o VibePad encadeava.
+            let top = if is_vibepad(&current) { original } else { current };
+            unlink_from_chain(guid, &top, &child)?;
+        }
+        if backup.get_value::<u32, _>("ModesAdded").is_ok() {
+            let _ = fx.delete_value(SFX_MODES);
         }
         if let Ok(value) = backup.get_value::<u32, _>("DisableEnhancements") {
             fx.set_value(DISABLE_ENHANCEMENTS, &value).map_err(set_err)?;
