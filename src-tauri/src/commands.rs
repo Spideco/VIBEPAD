@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::PathBuf, sync::atomic::Ordering};
+use std::{collections::HashMap, path::PathBuf, sync::atomic::Ordering, time::Duration};
 
 use serde::Serialize;
 use tauri::{AppHandle, Manager};
@@ -49,13 +49,13 @@ async fn rebuild_hotkeys(app: &AppHandle) -> HashMap<String, String> {
         .unwrap_or_default()
 }
 
-pub fn play(state: &AppState, id: &str) -> CmdResult<()> {
+pub fn play(state: &AppState, id: &str, start: Duration) -> CmdResult<()> {
     let (path, volume, exclusive) = {
         let lib = state.library.lock().unwrap();
         let sound = lib.sound(id).ok_or("Som não encontrado")?;
         (PathBuf::from(&sound.path), sound.volume, !lib.settings.allow_overlap)
     };
-    state.audio.send(AudioCommand::Play { sound_id: id.to_string(), path, volume, exclusive });
+    state.audio.send(AudioCommand::Play { sound_id: id.to_string(), path, volume, exclusive, start });
     Ok(())
 }
 
@@ -252,8 +252,9 @@ pub async fn update_settings(app: AppHandle, settings: Settings) -> CmdResult<Sn
 }
 
 #[tauri::command]
-pub async fn play_sound(app: AppHandle, id: String) -> CmdResult<()> {
-    play(&app.state::<AppState>(), &id)
+pub async fn play_sound(app: AppHandle, id: String, start_ms: Option<u64>) -> CmdResult<()> {
+    let start = Duration::from_millis(start_ms.unwrap_or(0));
+    play(&app.state::<AppState>(), &id, start)
 }
 
 #[tauri::command]

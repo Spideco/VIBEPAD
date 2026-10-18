@@ -109,7 +109,7 @@ pub fn handle(app: &AppHandle, shortcut_id: u32) {
     let action = state.hotkeys.map.lock().unwrap().get(&shortcut_id).cloned();
     match action {
         Some(HotkeyAction::Play(sound_id)) => {
-            if let Err(e) = commands::play(&state, &sound_id) {
+            if let Err(e) = commands::play(&state, &sound_id, std::time::Duration::ZERO) {
                 let _ = app.emit("audio-error", e);
             }
         }

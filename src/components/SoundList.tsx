@@ -25,6 +25,7 @@ interface Props extends RowActions {
   selectedId: string | null;
   playing: Set<string>;
   startedAt: Record<string, number>;
+  paused: Record<string, number>;
   hotkeyErrors: Record<string, string>;
   onStopAll: () => void;
   onAdd: () => void;
@@ -104,9 +105,11 @@ export function SoundList(props: Props) {
               selected={props.selectedId === s.id}
               playing={playing.has(s.id)}
               startedAt={props.startedAt[s.id]}
+              pausedAt={props.paused[s.id]}
               hotkeyError={props.hotkeyErrors[s.id]}
               onSelect={props.onSelect}
               onToggle={props.onToggle}
+              onSeek={props.onSeek}
               onFavorite={props.onFavorite}
               onVolume={props.onVolume}
               onRename={props.onRename}
