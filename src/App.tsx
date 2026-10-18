@@ -336,10 +336,8 @@ export default function App() {
             <SettingsView
               settings={settings}
               devices={devices}
-              hotkeyErrors={hotkeyErrors}
               onSettings={updateSettings}
               onRefreshDevices={refreshDevices}
-              onEditStopHotkey={editStopHotkey}
               onNotify={push}
             />
           )}
