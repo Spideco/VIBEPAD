@@ -1,55 +1,71 @@
-# VibePad
+<p align="center">
+  <img src="app-icon.svg" width="96" alt="Ícone do VibePad">
+</p>
 
-Soundboard para desktop no estilo Soundpad: atalhos globais, roteamento de áudio para o microfone, waveform e controle de volume. Feito com **Tauri 2 (Rust)** + **React** + **Tailwind CSS 4**.
+<h1 align="center">VibePad</h1>
 
-## Pré-requisitos (Windows)
+<p align="center">
+  <strong>Toque sons direto no seu microfone, com um atalho de teclado.</strong><br>
+  Um soundboard para Windows, no estilo do Soundpad, para usar no Discord, nos jogos e nas lives.
+</p>
 
-1. **Rust**: <https://rustup.rs> (instale também o *Microsoft C++ Build Tools* quando solicitado)
-2. **Node.js 18+**
-3. **WebView2**: já vem no Windows 10/11 atualizado
-4. Opcional, para enviar sons ao microfone: **VB-Audio Virtual Cable** (<https://vb-audio.com/Cable/>)
+<p align="center">
+  <a href="https://github.com/Spideco/VIBEPAD/releases/latest"><strong>⬇ Baixar a versão mais recente</strong></a>
+</p>
 
-## Rodando
+![Biblioteca de sons do VibePad, com um som tocando](docs/screenshots/biblioteca.png)
 
-```bash
-npm install
-npm run tauri dev      # app desktop em modo desenvolvimento
-npm run tauri build    # gera o instalador em src-tauri/target/release/bundle
-```
+## O que é o VibePad
 
-`npm run dev` sozinho abre só a interface no navegador, com dados simulados (útil para mexer no visual).
+O VibePad é um aplicativo para tocar efeitos sonoros, memes e músicas **no seu microfone**: quem está na call ou no jogo com você escuta o som como se fosse a sua voz. Você também ouve tudo nos seus fones, para saber o que está tocando.
 
-## Como o som chega ao microfone
+Você monta a sua biblioteca de sons, define um atalho para cada um e dispara os sons a qualquer momento, mesmo com o VibePad minimizado e você no meio de uma partida.
 
-O VibePad toca cada som em **dois dispositivos ao mesmo tempo**:
+## Destaques
 
-| Rota | Dispositivo | Para quê |
-|---|---|---|
-| Microfone | `CABLE Input` (detectado automaticamente) | Discord, jogos e OBS escutam pelo `CABLE Output` |
-| Fones | Saída padrão (ou a que você escolher) | Para você ouvir o que está tocando |
+- **Direto no seu microfone:** sem instalar cabo virtual e sem trocar o microfone no Discord ou no jogo. É só escolher o microfone que você já usa e clicar em **Instalar**.
+- **Atalhos globais:** cada som pode ter a sua tecla ou combinação, e elas funcionam mesmo com o app em segundo plano. Tem também um atalho para **parar todos os sons**.
+- **Barra de reprodução:** pause, continue e pule para qualquer parte do som, como num player de vídeo.
+- **Controle de volume:** volume geral, volume de cada som e um volume separado só para os seus fones.
+- **Biblioteca organizada:** busca, favoritos e ordenação. É só arrastar os arquivos para a janela para adicionar.
+- **Convive com outros apps de áudio:** funciona junto com o Equalizer APO e mantém a sua supressão de ruído funcionando na sua voz.
+- **Formatos comuns:** MP3, WAV, OGG, FLAC e M4A.
 
-No app de destino, selecione **CABLE Output** como microfone. Para mandar sua voz junto, use *Propriedades do microfone → Escutar → Escutar este dispositivo → CABLE Input*, ou o Voicemeeter.
+## Telas
 
-## Estrutura
+| Teclas de atalho | Configurações do microfone |
+|---|---|
+| ![Lista de atalhos de teclado do VibePad](docs/screenshots/atalhos.png) | ![Configurações do microfone nativo do VibePad](docs/screenshots/configuracoes.png) |
 
-```
-src/                     React (UI)
-  App.tsx                estado, eventos do back-end, atalhos de navegação
-  components/            Sidebar, SoundList/SoundRow, Waveform, HotkeyRecorder, Settings…
-  lib/api.ts             ponte com os comandos Tauri (cai num mock fora do Tauri)
-src-tauri/src/
-  audio.rs               thread de áudio (rodio/cpal): uma voz = um Sink por dispositivo
-  waveform.rs            decodifica o arquivo e gera 120 picos + duração
-  hotkeys.rs             registro de atalhos globais (tauri-plugin-global-shortcut)
-  commands.rs            comandos expostos ao front-end
-  library.rs             modelo + persistência em %APPDATA%/com.vibepad.app/library.json
-```
+## Como começar
 
-## Atalhos
+1. **Baixe e instale** o VibePad pela [página de versões](https://github.com/Spideco/VIBEPAD/releases/latest). O arquivo recomendado é o `VibePad_x.y.z_x64-setup.exe`.
+2. **Adicione seus sons** com o botão **Adicionar Som** ou arrastando os arquivos para a janela.
+3. **Instale no seu microfone:** em **Configurações → Microfone**, clique em **Instalar** ao lado do microfone que você usa no Discord ou no jogo. O Windows vai pedir permissão de administrador uma vez.
+4. **Defina os atalhos:** clique em **Definir** ao lado de um som e aperte a tecla ou combinação que quiser.
+5. Pronto: aperte o atalho durante a call ou o jogo e todo mundo vai ouvir.
 
-- Clique no badge do atalho (ou em **Definir**) e pressione a combinação. `Esc` cancela, `Backspace` remove.
-- Se a combinação já pertence a outro som, ela é transferida para o novo.
-- Alguns atalhos são reservados pelo Windows (por exemplo, **F12** sozinho). Nesse caso o badge fica amarelo, com a explicação.
-- Dentro do app: `↑`/`↓` selecionam, `Enter`/`Espaço` tocam/param e um clique duplo na linha toca o som.
+## Dúvidas comuns
 
-Formatos suportados: MP3, WAV, OGG, FLAC, M4A/AAC.
+**O Windows mostrou "editor desconhecido" ao instalar.**
+O VibePad ainda não tem assinatura digital. Clique em **Mais informações → Executar assim mesmo**.
+
+**Testei no microfone do Windows e os sons não aparecem.**
+O teste de microfone do próprio Windows ignora os efeitos de áudio, então ele não mostra os sons. Teste pelo Discord, por um gravador ou pelo jogo.
+
+**Os sons saem cortados ou baixos para os outros.**
+A supressão de ruído (como o Krisp) e o cancelamento de eco do Discord podem confundir os sons com barulho. Desative essas opções no app de voz.
+
+**Quero que só o som vá para o microfone, sem a minha voz.**
+Ative **Bloquear minha voz** em **Configurações → Microfone**. Enquanto um som estiver tocando, só ele vai para o microfone.
+
+**Uso o Soundpad. Posso usar os dois?**
+Não é recomendado usar os dois no mesmo microfone. O VibePad funciona sem travar se o Soundpad estiver instalado, mas o ideal é escolher um.
+
+## Requisitos
+
+- Windows 10 ou 11 (64 bits)
+
+---
+
+<sub>Para desenvolvedores: `npm install` e `npm run tauri dev` para rodar, `npm run tauri build` para gerar o instalador (requer Rust e Node.js). Os detalhes do microfone nativo estão em [docs/microfone-nativo.md](docs/microfone-nativo.md).</sub>
