@@ -2,11 +2,11 @@
   <img src="app-icon.svg" width="96" alt="Ícone do VibePad">
 </p>
 
-<h1 align="center">VibePad</h1>
+<h1 align="center">VIBEPAD</h1>
 
 <p align="center">
   <strong>Toque sons direto no seu microfone, com um atalho de teclado.</strong><br>
-  Um soundboard para Windows, no estilo do Soundpad, para usar no Discord, nos jogos e nas lives.
+  Um soundboard para Windows, para usar no Discord, nos jogos e nas lives.
 </p>
 
 <p align="center">
@@ -45,27 +45,6 @@ Você monta a sua biblioteca de sons, define um atalho para cada um e dispara os
 4. **Defina os atalhos:** clique em **Definir** ao lado de um som e aperte a tecla ou combinação que quiser.
 5. Pronto: aperte o atalho durante a call ou o jogo e todo mundo vai ouvir.
 
-## Dúvidas comuns
-
-**O Windows mostrou "editor desconhecido" ao instalar.**
-O VibePad ainda não tem assinatura digital. Clique em **Mais informações → Executar assim mesmo**.
-
-**Testei no microfone do Windows e os sons não aparecem.**
-O teste de microfone do próprio Windows ignora os efeitos de áudio, então ele não mostra os sons. Teste pelo Discord, por um gravador ou pelo jogo.
-
-**Os sons saem cortados ou baixos para os outros.**
-A supressão de ruído (como o Krisp) e o cancelamento de eco do Discord podem confundir os sons com barulho. Desative essas opções no app de voz.
-
-**Quero que só o som vá para o microfone, sem a minha voz.**
-Ative **Bloquear minha voz** em **Configurações → Microfone**. Enquanto um som estiver tocando, só ele vai para o microfone.
-
-**Uso o Soundpad. Posso usar os dois?**
-Não é recomendado usar os dois no mesmo microfone. O VibePad funciona sem travar se o Soundpad estiver instalado, mas o ideal é escolher um.
-
 ## Requisitos
 
 - Windows 10 ou 11 (64 bits)
-
----
-
-<sub>Para desenvolvedores: `npm install` e `npm run tauri dev` para rodar, `npm run tauri build` para gerar o instalador (requer Rust e Node.js). Os detalhes do microfone nativo estão em [docs/microfone-nativo.md](docs/microfone-nativo.md).</sub>
