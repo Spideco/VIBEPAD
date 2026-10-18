@@ -1,6 +1,6 @@
 [package]
 name = "vibepad"
-version = "0.1.1"
+version = "0.1.2"
 description = "Soundboard com atalhos globais e roteamento para microfone"
 edition = "2021"
 
