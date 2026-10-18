@@ -1,22 +1,20 @@
-import { Headphones, Mic, PlayCircle, RefreshCw, SlidersHorizontal } from "lucide-react";
+import { Headphones, Mic, RefreshCw, SlidersHorizontal } from "lucide-react";
 import type { DeviceInfo, Settings } from "../lib/types";
-import { OUTPUT_MODES, STOP_KEY } from "../lib/types";
+import { OUTPUT_MODES } from "../lib/types";
 import { MicCard } from "./MicCard";
-import { Card, Field, HotkeyBadge, Select, Toggle, VolumeSlider } from "./ui";
+import { Card, Field, Select, VolumeSlider } from "./ui";
 
 interface Props {
   settings: Settings;
   devices: DeviceInfo[];
-  hotkeyErrors: Record<string, string>;
   onSettings: (patch: Partial<Settings>) => void;
   onRefreshDevices: () => void;
-  onEditStopHotkey: () => void;
   onNotify: (kind: "success" | "error", message: string) => void;
 }
 
 const AUTO = "__auto__";
 
-export function SettingsView({ settings, devices, hotkeyErrors, onSettings, onRefreshDevices, onEditStopHotkey, onNotify }: Props) {
+export function SettingsView({ settings, devices, onSettings, onRefreshDevices, onNotify }: Props) {
   const defaultOut = devices.find((d) => d.isDefault);
 
   return (
@@ -24,7 +22,7 @@ export function SettingsView({ settings, devices, hotkeyErrors, onSettings, onRe
       <div className="flex items-center mb-5">
         <div className="mr-auto">
           <h1 className="text-[17px] font-semibold text-white">Configurações</h1>
-          <p className="text-xs text-muted">Roteamento de áudio, volumes e comportamento de reprodução.</p>
+          <p className="text-xs text-muted">Roteamento de áudio e volumes.</p>
         </div>
         <button onClick={onRefreshDevices} className="h-9 px-3 rounded-lg border border-line text-sm flex items-center gap-2 text-zinc-300 hover:border-accent/60 hover:text-white">
           <RefreshCw size={14} /> Atualizar dispositivos
@@ -80,23 +78,6 @@ export function SettingsView({ settings, devices, hotkeyErrors, onSettings, onRe
           </Field>
         </Card>
 
-        <Card title="Reprodução" icon={<PlayCircle size={16} />}>
-          <Field label="Sobrepor sons" hint="Se desligado, iniciar um som interrompe o anterior.">
-            <div className="h-9 flex items-center">
-              <Toggle label="Sobrepor sons" checked={settings.allowOverlap} onChange={(v) => onSettings({ allowOverlap: v })} />
-            </div>
-          </Field>
-          <Field label="Atalho “Parar tudo”" hint="Interrompe todos os sons de qualquer lugar.">
-            <div className="h-9 flex items-center gap-2">
-              <HotkeyBadge hotkey={settings.stopHotkey} error={hotkeyErrors[STOP_KEY]} onClick={onEditStopHotkey} placeholder="+ Definir atalho" />
-              {settings.stopHotkey && (
-                <button onClick={() => onSettings({ stopHotkey: null })} className="text-xs text-muted hover:text-red-300">
-                  Remover
-                </button>
-              )}
-            </div>
-          </Field>
-        </Card>
 
       </div>
     </div>
