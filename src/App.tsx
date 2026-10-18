@@ -32,6 +32,8 @@ export default function App() {
   const [devices, setDevices] = useState<DeviceInfo[]>([]);
   const [playing, setPlaying] = useState<Set<string>>(new Set());
   const [startedAt, setStartedAt] = useState<Record<string, number>>({});
+  /** Sons pausados e a posição (ms) em que pararam. */
+  const [paused, setPaused] = useState<Record<string, number>>({});
   const [view, setView] = useState<View>("library");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortKey>("added");
@@ -58,7 +60,10 @@ export default function App() {
     refreshDevices();
     const subs = [
       api.onPlaybackState((ids) => setPlaying(new Set(ids))),
-      api.onPlaybackStarted((id) => setStartedAt((s) => ({ ...s, [id]: performance.now() }))),
+      api.onPlaybackStarted((id, positionMs) => {
+        setStartedAt((s) => ({ ...s, [id]: performance.now() - positionMs }));
+        setPaused((p) => without(p, id));
+      }),
       api.onAudioError((msg) => push("error", msg)),
     ];
     return () => subs.forEach((p) => p.then((un) => un()));
@@ -120,11 +125,38 @@ export default function App() {
   // ---- Ações de som ----
   const playingRef = useRef(playing);
   playingRef.current = playing;
+  const startedAtRef = useRef(startedAt);
+  startedAtRef.current = startedAt;
+  const pausedRef = useRef(paused);
+  pausedRef.current = paused;
 
+  // Play/pause: pausar guarda a posição e para o som; tocar de novo retoma
+  // dali (o back-end abre o arquivo já posicionado, como na barra).
   const toggle = useCallback(
     (id: string) => {
       setSelectedId(id);
-      (playingRef.current.has(id) ? api.stopSound(id) : api.playSound(id)).catch(fail);
+      if (playingRef.current.has(id)) {
+        const position = Math.max(0, performance.now() - (startedAtRef.current[id] ?? performance.now()));
+        setPaused((p) => ({ ...p, [id]: position }));
+        api.stopSound(id).catch(fail);
+      } else {
+        const position = pausedRef.current[id] ?? 0;
+        setPaused((p) => without(p, id));
+        setStartedAt((s) => ({ ...s, [id]: performance.now() - position }));
+        api.playSound(id, position).catch(fail);
+      }
+    },
+    [fail],
+  );
+
+  // Barra de reprodução: (re)começa o som na posição escolhida. A posição é
+  // aplicada já, para a barra não voltar enquanto o back-end confirma.
+  const seek = useCallback(
+    (id: string, ms: number) => {
+      setSelectedId(id);
+      setStartedAt((s) => ({ ...s, [id]: performance.now() - ms }));
+      setPaused((p) => without(p, id));
+      api.playSound(id, ms).catch(fail);
     },
     [fail],
   );
@@ -140,6 +172,7 @@ export default function App() {
     () => ({
       onSelect: setSelectedId,
       onToggle: toggle,
+      onSeek: seek,
       onFavorite: (id: string, favorite: boolean) => {
         patchLocal(id, { favorite });
         api.updateSound(id, { favorite }).catch(fail);
@@ -165,7 +198,7 @@ export default function App() {
         api.removeSound(id).catch(fail);
       },
     }),
-    [toggle, fail, commitVolume, sounds, applySnapshot],
+    [toggle, seek, fail, commitVolume, sounds, applySnapshot],
   );
 
   // ---- Configurações ----
@@ -279,8 +312,12 @@ export default function App() {
               selectedId={selectedId}
               playing={playing}
               startedAt={startedAt}
+              paused={paused}
               hotkeyErrors={hotkeyErrors}
-              onStopAll={() => api.stopAll().catch(fail)}
+              onStopAll={() => {
+                setPaused({});
+                api.stopAll().catch(fail);
+              }}
               onAdd={pickFiles}
               {...actions}
             />
@@ -324,4 +361,10 @@ export default function App() {
       <Toasts toasts={toasts} onDismiss={dismiss} />
     </div>
   );
+}
+
+function without<T>(record: Record<string, T>, key: string): Record<string, T> {
+  if (!(key in record)) return record;
+  const { [key]: _, ...rest } = record;
+  return rest;
 }

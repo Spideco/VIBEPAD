@@ -14,7 +14,7 @@ use std::{
 };
 
 use rodio::cpal::traits::{DeviceTrait, HostTrait};
-use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink};
+use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink, Source};
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter};
 
@@ -69,6 +69,8 @@ pub enum AudioCommand {
         path: PathBuf,
         volume: f32,
         exclusive: bool,
+        /// Posição de início (para a barra de reprodução).
+        start: Duration,
     },
     Stop(String),
     StopAll,
@@ -183,6 +185,13 @@ fn gain(route: Route, volume: f32, config: &AudioConfig) -> f32 {
     (volume * config.master_volume * monitor).clamp(0.0, 2.0)
 }
 
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PlaybackStarted<'a> {
+    id: &'a str,
+    position_ms: u64,
+}
+
 fn emit_error(app: &AppHandle, message: impl Into<String>) {
     let _ = app.emit("audio-error", message.into());
 }
@@ -195,17 +204,18 @@ fn run(app: AppHandle, rx: mpsc::Receiver<AudioCommand>, mut config: AudioConfig
 
     loop {
         match rx.recv_timeout(Duration::from_millis(80)) {
-            Ok(AudioCommand::Play { sound_id, path, volume, exclusive }) => {
+            Ok(AudioCommand::Play { sound_id, path, volume, exclusive, start }) => {
                 if exclusive {
                     voices.clear();
                 } else {
                     // Disparar o mesmo som de novo reinicia em vez de sobrepor.
                     voices.retain(|v| v.sound_id != sound_id);
                 }
-                match start_voice(&outputs, &config, &feed, &sound_id, path, volume) {
+                match start_voice(&outputs, &config, &feed, &sound_id, path, volume, start) {
                     Ok(voice) => {
                         voices.push(voice);
-                        let _ = app.emit("playback-started", &sound_id);
+                        let started = PlaybackStarted { id: &sound_id, position_ms: start.as_millis() as u64 };
+                        let _ = app.emit("playback-started", started);
                     }
                     Err(e) => emit_error(&app, e),
                 }
@@ -248,15 +258,14 @@ fn start_voice(
     sound_id: &str,
     path: PathBuf,
     volume: f32,
+    start: Duration,
 ) -> Result<Voice, String> {
     if outputs.is_empty() {
         return Err("Nenhum dispositivo de saída disponível. Verifique as configurações de áudio.".into());
     }
     let mut sinks = Vec::with_capacity(outputs.len());
     for output in outputs {
-        let file = File::open(&path).map_err(|e| format!("Não foi possível abrir {}: {e}", path.display()))?;
-        let source = Decoder::new(BufReader::new(file))
-            .map_err(|e| format!("Formato não suportado ({}): {e}", path.display()))?;
+        let source = open_at(&path, start)?;
         let level = gain(output.route, volume, config);
         let sink = match &output.kind {
             OutputKind::Device { handle, .. } => {
@@ -270,6 +279,20 @@ fn start_voice(
         sinks.push((output.route, sink));
     }
     Ok(Voice { sound_id: sound_id.to_string(), volume, sinks })
+}
+
+/// Abre o arquivo já posicionado em `start`. O seek acontece aqui, na thread
+/// de comandos, e não no callback do dispositivo, para não picotar o áudio.
+fn open_at(path: &PathBuf, start: Duration) -> Result<Decoder<BufReader<File>>, String> {
+    let file = File::open(path).map_err(|e| format!("Não foi possível abrir {}: {e}", path.display()))?;
+    let mut source = Decoder::new(BufReader::new(file))
+        .map_err(|e| format!("Formato não suportado ({}): {e}", path.display()))?;
+    if !start.is_zero() && source.try_seek(start).is_err() {
+        // Formato sem seek: decodifica e descarta até a posição.
+        let samples = (start.as_secs_f64() * source.sample_rate() as f64) as usize * source.channels() as usize;
+        source.by_ref().take(samples).for_each(drop);
+    }
+    Ok(source)
 }
 
 fn find_device(host: &rodio::cpal::Host, name: &str) -> Option<rodio::cpal::Device> {

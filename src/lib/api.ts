@@ -14,7 +14,8 @@ export interface Api {
   updateSound(id: string, patch: { name?: string; volume?: number; favorite?: boolean }): Promise<Sound>;
   setHotkey(id: string, hotkey: string | null): Promise<Snapshot>;
   updateSettings(settings: Settings): Promise<Snapshot>;
-  playSound(id: string): Promise<void>;
+  /** `startMs`: posição de início, usada pela barra de reprodução. */
+  playSound(id: string, startMs?: number): Promise<void>;
   stopSound(id: string): Promise<void>;
   stopAll(): Promise<void>;
   setHotkeysSuspended(suspended: boolean): Promise<Snapshot>;
@@ -23,7 +24,7 @@ export interface Api {
   installNativeMic(guid: string): Promise<string>;
   uninstallNativeMic(guid: string): Promise<string>;
   onPlaybackState(cb: (ids: string[]) => void): Promise<UnlistenFn>;
-  onPlaybackStarted(cb: (id: string) => void): Promise<UnlistenFn>;
+  onPlaybackStarted(cb: (id: string, positionMs: number) => void): Promise<UnlistenFn>;
   onAudioError(cb: (message: string) => void): Promise<UnlistenFn>;
 }
 
@@ -47,7 +48,8 @@ const tauriApi: Api = {
   updateSound: (id, patch) => invoke("update_sound", { id, ...patch }),
   setHotkey: (id, hotkey) => invoke("set_hotkey", { id, hotkey }),
   updateSettings: (settings) => invoke("update_settings", { settings }),
-  playSound: (id) => invoke("play_sound", { id }),
+  // O back-end espera milissegundos inteiros (u64).
+  playSound: (id, startMs) => invoke("play_sound", { id, startMs: startMs === undefined ? undefined : Math.max(0, Math.round(startMs)) }),
   stopSound: (id) => invoke("stop_sound", { id }),
   stopAll: () => invoke("stop_all"),
   setHotkeysSuspended: (suspended) => invoke("set_hotkeys_suspended", { suspended }),
@@ -55,7 +57,8 @@ const tauriApi: Api = {
   installNativeMic: (guid) => invoke("install_native_mic", { guid }),
   uninstallNativeMic: (guid) => invoke("uninstall_native_mic", { guid }),
   onPlaybackState: (cb) => listen<string[]>("playback-state", (e) => cb(e.payload)),
-  onPlaybackStarted: (cb) => listen<string>("playback-started", (e) => cb(e.payload)),
+  onPlaybackStarted: (cb) =>
+    listen<{ id: string; positionMs: number }>("playback-started", (e) => cb(e.payload.id, e.payload.positionMs)),
   onAudioError: (cb) => listen<string>("audio-error", (e) => cb(e.payload)),
 };
 

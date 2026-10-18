@@ -1,13 +1,15 @@
 import { memo, useEffect, useRef, useState } from "react";
-import { Heart, Keyboard, MoreHorizontal, Pencil, Play, Square, Trash2, Volume2, XCircle } from "lucide-react";
+import { Heart, Keyboard, MoreHorizontal, Pause, Pencil, Play, Trash2, Volume2, XCircle } from "lucide-react";
 import type { Sound } from "../lib/types";
 import { formatDuration } from "../lib/hotkey";
-import { Waveform } from "./Waveform";
+import { usePlaybackProgress } from "../lib/usePlaybackProgress";
+import { SeekBar } from "./SeekBar";
 import { HotkeyBadge, useClickOutside, VolumeSlider } from "./ui";
 
 export interface RowActions {
   onSelect: (id: string) => void;
   onToggle: (id: string) => void;
+  onSeek: (id: string, ms: number) => void;
   onFavorite: (id: string, favorite: boolean) => void;
   onVolume: (id: string, volume: number) => void;
   onRename: (id: string, name: string) => void;
@@ -21,14 +23,19 @@ interface Props extends RowActions {
   selected: boolean;
   playing: boolean;
   startedAt?: number;
+  /** Posição (ms) em que o som foi pausado, se estiver pausado. */
+  pausedAt?: number;
   hotkeyError?: string;
 }
 
 export const SoundRow = memo(function SoundRow(props: Props) {
-  const { sound, selected, playing, startedAt, hotkeyError } = props;
+  const { sound, selected, playing, startedAt, pausedAt, hotkeyError } = props;
+  const paused = !playing && pausedAt !== undefined;
   const [popover, setPopover] = useState<"none" | "volume" | "menu">("none");
   const [renaming, setRenaming] = useState(false);
   const popRef = useRef<HTMLDivElement>(null);
+  const liveProgress = usePlaybackProgress(playing ? startedAt : undefined, sound.durationMs);
+  const progress = paused && sound.durationMs > 0 ? Math.min(1, pausedAt / sound.durationMs) : liveProgress;
   useClickOutside(popRef, () => setPopover("none"), popover !== "none");
 
   const iconBtn =
@@ -38,7 +45,7 @@ export const SoundRow = memo(function SoundRow(props: Props) {
     <div
       onMouseDown={() => props.onSelect(sound.id)}
       onDoubleClick={(e) => {
-        if ((e.target as HTMLElement).closest("button,input")) return;
+        if ((e.target as HTMLElement).closest("button,input,[data-seekbar]")) return;
         props.onToggle(sound.id);
       }}
       onContextMenu={(e) => {
@@ -54,7 +61,7 @@ export const SoundRow = memo(function SoundRow(props: Props) {
       }`}
     >
       <button
-        aria-label={playing ? `Parar ${sound.name}` : `Tocar ${sound.name}`}
+        aria-label={playing ? `Pausar ${sound.name}` : paused ? `Continuar ${sound.name}` : `Tocar ${sound.name}`}
         onClick={() => props.onToggle(sound.id)}
         className={`size-8 shrink-0 rounded-full grid place-items-center transition-all ${
           playing
@@ -62,7 +69,7 @@ export const SoundRow = memo(function SoundRow(props: Props) {
             : "bg-white/10 text-zinc-200 hover:bg-accent hover:text-white"
         }`}
       >
-        {playing ? <Square size={12} fill="currentColor" /> : <Play size={14} fill="currentColor" className="ml-0.5" />}
+        {playing ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" className="ml-0.5" />}
       </button>
 
       <div className="flex-1 min-w-0 flex items-center gap-2">
@@ -128,12 +135,20 @@ export const SoundRow = memo(function SoundRow(props: Props) {
         <HotkeyBadge hotkey={sound.hotkey} error={hotkeyError} onClick={() => props.onEditHotkey(sound.id)} />
       </div>
 
-      <span className="w-11 text-right text-[13px] text-zinc-400 tabular-nums shrink-0">
+      <span className="w-[92px] text-right text-[13px] text-zinc-400 tabular-nums shrink-0">
+        {(playing || paused) && <span className="text-zinc-100">{formatDuration(progress * sound.durationMs)} / </span>}
         {formatDuration(sound.durationMs)}
       </span>
 
       <div className="w-[34%] max-w-[300px] min-w-[140px] h-9 shrink-0">
-        <Waveform peaks={sound.peaks} startedAt={playing ? startedAt : undefined} durationMs={sound.durationMs} active={playing || selected} />
+        <SeekBar
+          durationMs={sound.durationMs}
+          progress={progress}
+          playing={playing}
+          active={playing || paused || selected}
+          label={sound.name}
+          onSeek={(ms) => props.onSeek(sound.id, ms)}
+        />
       </div>
     </div>
   );

@@ -60,12 +60,12 @@ const mockMics = [
 
 type Cb<T> = (v: T) => void;
 const stateListeners = new Set<Cb<string[]>>();
-const startedListeners = new Set<Cb<string>>();
+const startedListeners = new Set<(id: string, positionMs: number) => void>();
 const timers = new Map<string, number>();
 
 const clone = (): Snapshot => structuredClone(state);
 const emitState = () => stateListeners.forEach((cb) => cb([...timers.keys()]));
-const sub = <T>(set: Set<Cb<T>>, cb: Cb<T>) => {
+const sub = <F>(set: Set<F>, cb: F) => {
   set.add(cb);
   return Promise.resolve(() => void set.delete(cb));
 };
@@ -108,12 +108,12 @@ export const mockApi: Api = {
     state.settings = { ...settings };
     return clone();
   },
-  async playSound(id) {
+  async playSound(id, startMs = 0) {
     if (!state.settings.allowOverlap) [...timers.keys()].forEach(stop);
     stop(id);
     const s = state.sounds.find((s) => s.id === id)!;
-    timers.set(id, window.setTimeout(() => (timers.delete(id), emitState()), s.durationMs));
-    startedListeners.forEach((cb) => cb(id));
+    timers.set(id, window.setTimeout(() => (timers.delete(id), emitState()), Math.max(0, s.durationMs - startMs)));
+    startedListeners.forEach((cb) => cb(id, startMs));
     emitState();
   },
   async stopSound(id) {
