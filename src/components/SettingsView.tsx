@@ -30,7 +30,7 @@ export function SettingsView({ settings, devices, onSettings, onRefreshDevices, 
       </div>
 
       <div className="space-y-4 max-w-3xl">
-        <MicCard settings={settings} devices={devices} onSettings={onSettings} onNotify={onNotify} />
+        <MicCard settings={settings} onSettings={onSettings} onNotify={onNotify} />
 
         <Card title="Saída de áudio" icon={<SlidersHorizontal size={16} />}>
           <Field label="Modo de saída" hint="Para onde cada som é enviado.">

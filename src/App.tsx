@@ -221,6 +221,12 @@ export default function App() {
     [commitSettings],
   );
 
+  // O cabo virtual saiu das Configurações: quem tinha ele salvo volta para o
+  // microfone nativo, senão ficaria preso numa opção que não aparece mais.
+  useEffect(() => {
+    if (settings?.micBackend === "virtualCable") updateSettings({ micBackend: "native" });
+  }, [settings?.micBackend, updateSettings]);
+
   const editStopHotkey = () =>
     setRecording({ soundId: null, label: "Parar todos os sons", current: settings?.stopHotkey ?? null });
 
