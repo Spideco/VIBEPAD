@@ -1,60 +1,24 @@
 import { useCallback, useEffect, useState } from "react";
-import { Cable, Loader2, Mic, ShieldCheck } from "lucide-react";
+import { Loader2, Mic, ShieldCheck } from "lucide-react";
 import { api, errorMessage } from "../lib/api";
-import type { DeviceInfo, MicBackend, NativeMicState, Settings } from "../lib/types";
-import { Card, Field, Select, Toggle } from "./ui";
+import type { NativeMicState, Settings } from "../lib/types";
+import { Card, Field, Toggle } from "./ui";
 
 interface Props {
   settings: Settings;
-  devices: DeviceInfo[];
   onSettings: (patch: Partial<Settings>) => void;
   onNotify: (kind: "success" | "error", message: string) => void;
 }
 
-const AUTO = "__auto__";
-
-const BACKENDS: { value: MicBackend; title: string; description: string; icon: React.ReactNode }[] = [
-  { value: "native", title: "Nativo (recomendado)", description: "Direto no seu microfone, como o Soundpad", icon: <Mic size={17} /> },
-  { value: "virtualCable", title: "Cabo virtual", description: "VB-Audio Cable ou Voicemeeter", icon: <Cable size={17} /> },
-];
-
-export function MicCard({ settings, devices, onSettings, onNotify }: Props) {
-  const native = settings.micBackend === "native";
-
+export function MicCard({ settings, onSettings, onNotify }: Props) {
   return (
     <Card title="Microfone" icon={<Mic size={16} />}>
-      <Field label="Método" hint="Como os sons chegam a quem está te ouvindo.">
-        <div className="grid grid-cols-2 gap-2">
-          {BACKENDS.map((b) => (
-            <button
-              key={b.value}
-              onClick={() => onSettings({ micBackend: b.value })}
-              className={`rounded-xl border px-3 py-2.5 text-left flex gap-3 items-start transition-colors ${
-                settings.micBackend === b.value
-                  ? "border-accent bg-accent/10"
-                  : "border-line hover:border-zinc-600"
-              }`}
-            >
-              <span className={settings.micBackend === b.value ? "text-accent-soft mt-0.5" : "text-zinc-400 mt-0.5"}>{b.icon}</span>
-              <span>
-                <span className="block text-sm text-zinc-100">{b.title}</span>
-                <span className="block text-xs text-muted">{b.description}</span>
-              </span>
-            </button>
-          ))}
-        </div>
-      </Field>
-
-      {native ? (
-        <NativeMicSection settings={settings} onSettings={onSettings} onNotify={onNotify} />
-      ) : (
-        <VirtualCableSection settings={settings} devices={devices} onSettings={onSettings} />
-      )}
+      <NativeMicSection settings={settings} onSettings={onSettings} onNotify={onNotify} />
     </Card>
   );
 }
 
-function NativeMicSection({ settings, onSettings, onNotify }: Omit<Props, "devices">) {
+function NativeMicSection({ settings, onSettings, onNotify }: Props) {
   const [state, setState] = useState<NativeMicState | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -157,30 +121,5 @@ function NativeMicSection({ settings, onSettings, onNotify }: Omit<Props, "devic
         <b className="text-zinc-300">cancelamento de eco</b> no Discord ou no app de voz.
       </p>
     </>
-  );
-}
-
-function VirtualCableSection({ settings, devices, onSettings }: Omit<Props, "onNotify">) {
-  const detected = devices.find((d) => d.isVirtual);
-  const missing = !(settings.micDevice ? devices.some((d) => d.name === settings.micDevice) : detected);
-  return (
-    <Field label="Cabo virtual" hint={<>Dispositivo que alimenta o microfone (ex.: <b>CABLE Input</b>).</>}>
-      <Select label="Cabo virtual" value={settings.micDevice ?? AUTO} onChange={(v) => onSettings({ micDevice: v === AUTO ? null : v })}>
-        <option value={AUTO}>Detectar automaticamente{detected ? ` (${detected.name})` : ""}</option>
-        {devices.map((d) => (
-          <option key={d.name} value={d.name}>
-            {d.name}
-          </option>
-        ))}
-      </Select>
-      {missing && (
-        <p className="text-xs text-amber-300 mt-2 leading-relaxed">
-          Nenhum cabo virtual encontrado. Instale o VB-Audio Virtual Cable ou use o método nativo.
-        </p>
-      )}
-      <p className="text-xs text-muted mt-2 leading-relaxed">
-        No Discord ou no jogo, escolha <b className="text-zinc-300">CABLE Output</b> como microfone.
-      </p>
-    </Field>
   );
 }
